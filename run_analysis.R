@@ -1,3 +1,4 @@
+library(dplyr)
 
 # Begin by downloading the datasets
 download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip", "project-datasets.zip")
@@ -27,16 +28,27 @@ train_df <- cbind(subject_train, y_train, x_train)
 # Merge test and train data frames
 full_df <- rbind(test_df, train_df)
 
-###  STEP 2 - Extract measurements on mean and sd for each measurement
-# Using features.txt, we know which columns contain means and sds:
-#   1-6, 41-46, 81-86, 121-126, 161-166, 201-202, 214-215, 227-228, 240-241
-#   253-254, 266-271, 345-350, 424-429, 503-504, 516-517, 529-530, 542-543
-# Note that each fo these is off by 2 in the full_df data frame
-
-# Let's add names to the full_df to make this easier
+###  STEPS 2 and 4 - Extract measurements on mean and sd for each measurement
+# Let's add names to the full_df to make this easier--this is step 4 of the assignment
 feature_names <- read.table("data/UCI HAR Dataset/features.txt")
 names(full_df) <- c("Subject", "Activity", as.character(feature_names[[2]]))
 
 # Create a df with the first two columns and others that contain "mean()" or "std()" in the name
 tidy_df <- full_df[, sort(c(1, 2, grep("mean\\(\\)", names(full_df)), grep("std\\(\\)", names(full_df))))]
 
+###  STEP 3 - Name the activities
+# Create a list of the activities
+activities <- read.table("data/UCI HAR Dataset/activity_labels.txt")
+
+# Update the data fram with a factor variable labeled correctly
+tidy_df$Activity <- factor(tidy_df$Activity, labels = activities[, 2])
+
+###  STEP 5 - Creating a data frame with the average for each variable for each activity and each subject
+# Create the gropued-by data frame
+newtidy_df <- group_by(tidy_df, Subject, Activity)
+
+# Summarize each column
+finaltidy_df <- summarize_each(newtidy_df, funs(mean))
+
+# Write the final data frame to a file
+write.table(finaltidy_df, "finaltidydf.txt")
